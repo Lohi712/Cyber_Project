@@ -9,6 +9,24 @@
         input, select { display: block; margin: 15px auto; padding: 12px; width: 250px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; }
         button { background: #238636; border: none; padding: 12px 24px; cursor: pointer; border-radius: 6px; font-weight: bold; width: 100%; }
         .nav-link { margin-top: 20px; display: block; color: #58a6ff; text-decoration: none; font-size: 14px; }
+        .error-alert {
+        background: rgba(248, 81, 73, 0.15);
+        border: 1px solid #f85149;
+        color: #f85149;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        animation: shake 0.5s ease-in-out;
+    }
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+    .error-icon { margin-right: 10px; font-weight: bold; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -25,6 +43,12 @@
             <button type="submit">Create Identity</button>
         </form>
         <a href="/" class="nav-link">Already have an identity? Login here</a>
+        {% if error_msg %}
+        <div class="error-alert">
+        <span class="error-icon">⚠</span>
+        <span>{{ error_msg }}</span>
+        </div>
+        {% endif %}
     </div>
 </body>
 </html>

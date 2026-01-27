@@ -9,6 +9,23 @@
         input { display: block; margin: 20px auto; padding: 12px; width: 220px; text-align: center; font-size: 28px; letter-spacing: 5px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; font-weight: bold; }
         button { background: #58a6ff; border: none; padding: 12px 24px; cursor: pointer; border-radius: 6px; font-weight: bold; width: 100%; color: white; font-size: 16px; }
         button:hover { background: #1f6feb; }
+        .mfa-error {
+        background: rgba(248, 81, 73, 0.1);
+        border: 1px solid #f85149;
+        color: #f85149;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 13px;
+        text-align: center;
+        animation: pulse-red 2s infinite;
+    }
+
+    @keyframes pulse-red {
+        0% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(248, 81, 73, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0); }
+    }
     </style>
 </head>
 <body>
@@ -20,6 +37,11 @@
             <input type="text" name="otp" placeholder="000000" maxlength="6" required autofocus autocomplete="off">
             <button type="submit">Verify & Enter Vault</button>
         </form>
+        {% if error_msg %}
+        <div class="mfa-error">
+        <strong>Verification Error:</strong> {{ error_msg }}
+        </div>
+    {% endif %}
     </div>
 </body>
 </html>
