@@ -205,3 +205,28 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# --- Security & Crypto Secrets ---
+# NEVER push private keys to GitHub
+*.pem
+*.key
+*.pub
+keys/
+
+# --- Evidence & Storage ---
+# Don't push actual evidence files (PDFs, Images, etc.) 
+# that you use for testing
+uploads/
+evidence_storage/
+*.pdf
+*.jpg
+*.png
+*.zip
+
+# --- Database & Environment ---
+# Ensure your specific database name is ignored 
+# (you already have db.sqlite3, but add variations)
+*.db
+*.sqlite
+.env
+.flaskenv
