@@ -9,6 +9,7 @@ import pyotp
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from flask import send_file
 
 app = Flask(__name__)
 app.secret_key = "secure_vault_key"
@@ -25,7 +26,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), nullable=False)
     # NEW: Store the unique 16-character MFA secret key [cite: 5, 16]
-    mfa_secret = db.Column(db.String(16), nullable=False)
+    mfa_secret = db.Column(db.String(32), nullable=False)
 
 # --- Evidence Model (Encryption & Hashing) ---
 class Evidence(db.Model):
@@ -36,6 +37,9 @@ class Evidence(db.Model):
     # Digital Signature: Proves authenticity and integrity 
     signature = db.Column(db.Text) 
     uploader = db.Column(db.String(50))
+    # Store AES key and IV as Base64 strings for each file
+    aes_key = db.Column(db.String(44))  # 32 bytes base64 encoded
+    iv = db.Column(db.String(24))       # 16 bytes base64 encoded
 
 # Generate a global RSA Key pair for this lab (Key Exchange/Signatures)
 # Note: In real life, these would be stored in .pem files 
@@ -53,11 +57,16 @@ def dashboard():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    # Only Lead Analysts and Investigators can CREATE (Object 1)
+    if session.get('role') not in ['Lead Analyst', 'Investigator']:
+        return "Access Denied: Your role does not permit uploading evidence."
     # Access Control: Only Investigators and Analysts can upload 
     if session.get('role') == 'Legal Auditor':
         return "Access Denied: Auditors cannot upload evidence."
 
     file = request.files['evidence_file']
+    if not file:
+        return "No file selected."
     file_data = file.read()
 
     # --- 1. Encryption (AES-256 Symmetric) ---
@@ -80,17 +89,61 @@ def upload_file():
     # Convert binary to text for storage 
     encoded_data = base64.b64encode(iv + encrypted_bytes).decode('utf-8')
     encoded_sig = base64.b64encode(signature).decode('utf-8')
+    encoded_aes_key = base64.b64encode(aes_key).decode('utf-8')
+    encoded_iv = base64.b64encode(iv).decode('utf-8')
 
     new_evidence = Evidence(
         filename=file.filename,
         encrypted_data=encoded_data,
         signature=encoded_sig,
-        uploader=User.query.get(session['user_id']).username
+        uploader=User.query.get(session['user_id']).username,
+        aes_key=encoded_aes_key,
+        iv=encoded_iv
     )
     db.session.add(new_evidence)
     db.session.commit()
     
     return redirect(url_for('dashboard'))
+
+@app.route('/delete/<int:id>')
+def delete_evidence(id):
+    # Only Lead Analysts can DELETE (Object 3)
+    if session.get('role') != 'Lead Analyst':
+        return "Access Denied: Only a Lead Analyst can remove evidence from the vault."
+    
+    item = Evidence.query.get(id)
+    if item:
+        db.session.delete(item)
+        db.session.commit()
+    return redirect(url_for('dashboard'))
+
+@app.route('/download/<int:id>')
+def download_evidence(id):
+    # Authorization: Auditors can see logs, but maybe only Analysts/Investigators can download
+    if session.get('role') == 'Legal Auditor':
+        return "Access Denied: Auditors cannot download raw evidence files."
+
+    item = Evidence.query.get(id)
+    if not item:
+        return "File not found."
+
+    # --- Step 1: Base64 Decode ---
+    raw_data = base64.b64decode(item.encrypted_data)
+    iv = base64.b64decode(item.iv)  # Retrieve IV from DB
+    aes_key = base64.b64decode(item.aes_key)  # Retrieve AES key from DB
+    encrypted_bytes = raw_data[16:]
+
+    # --- Step 2: AES Decryption ---
+    cipher = Cipher(algorithms.AES(aes_key), modes.CFB(iv))
+    decryptor = cipher.decryptor() # Use decryptor for decryption
+    decrypted_data = decryptor.update(encrypted_bytes) + decryptor.finalize()
+
+    # --- Step 3: Serve the File ---
+    return send_file(
+        io.BytesIO(decrypted_data),
+        download_name=item.filename,
+        as_attachment=True
+    )
 
 # --- 2. Home/Login Route (Single-Factor Auth) ---
 @app.route('/', methods=['GET', 'POST'])
@@ -120,16 +173,18 @@ def mfa_verify():
         otp_input = request.form.get('otp')
         user = User.query.get(session['temp_user_id'])
         
-        # Verify the code using the stored secret 
         totp = pyotp.TOTP(user.mfa_secret)
-        if totp.verify(otp_input):
+        # FIX: Added 'valid_window=1' to allow for slight time differences
+        if totp.verify(otp_input, valid_window=1):
             session['user_id'] = user.id
             session['role'] = user.role
+            session['username'] = user.username # FIX: Save username for the dashboard!
             session.pop('temp_user_id', None)
             return redirect(url_for('dashboard'))
         
         return "Invalid MFA Code. Access Denied."
     return render_template('mfa.html')
+
 # --- 4. Registration Route ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -157,6 +212,12 @@ def register():
 
         return render_template('mfa_setup.html', qr_code=qr_b64, secret=mfa_secret)
     return render_template('register.html')
+
+@app.route('/logout')
+def logout():
+    # Clear all session data (user_id, role, username)
+    session.clear()
+    return redirect(url_for('home'))
 
 # Initialize the database
 with app.app_context():
