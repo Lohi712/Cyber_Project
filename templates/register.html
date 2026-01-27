@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vault Registration</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d1117; color: white; text-align: center; padding-top: 100px; }
+        .box { display: inline-block; padding: 30px; border: 2px solid #2ea043; border-radius: 12px; background: #161b22; }
+        h2 { color: #2ea043; }
+        input, select { display: block; margin: 15px auto; padding: 12px; width: 250px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; }
+        button { background: #238636; border: none; padding: 12px 24px; cursor: pointer; border-radius: 6px; font-weight: bold; width: 100%; }
+        .nav-link { margin-top: 20px; display: block; color: #58a6ff; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Register Investigator</h2>
+        <form action="/register" method="post">
+            <input type="text" name="username" placeholder="Choose Username" required>
+            <input type="password" name="password" placeholder="Secure Password" required>
+            <select name="role">
+                <option value="Investigator">Investigator</option>
+                <option value="Lead Analyst">Lead Analyst</option>
+                <option value="Legal Auditor">Legal Auditor</option>
+            </select>
+            <button type="submit">Create Identity</button>
+        </form>
+        <a href="/" class="nav-link">Already have an identity? Login here</a>
+    </div>
+</body>
+</html>
