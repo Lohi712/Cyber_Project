@@ -5,6 +5,10 @@ import os
 import qrcode
 import io
 import base64
+import pyotp
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
 
 app = Flask(__name__)
 app.secret_key = "secure_vault_key"
@@ -22,6 +26,71 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False)
     # NEW: Store the unique 16-character MFA secret key [cite: 5, 16]
     mfa_secret = db.Column(db.String(16), nullable=False)
+
+# --- Evidence Model (Encryption & Hashing) ---
+class Evidence(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(100))
+    # Encoding: We store the encrypted binary as a Base64 string 
+    encrypted_data = db.Column(db.Text) 
+    # Digital Signature: Proves authenticity and integrity 
+    signature = db.Column(db.Text) 
+    uploader = db.Column(db.String(50))
+
+# Generate a global RSA Key pair for this lab (Key Exchange/Signatures)
+# Note: In real life, these would be stored in .pem files 
+private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+public_key = private_key.public_key()
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('home'))
+    
+    # Authorization: Fetch all evidence to display [cite: 16]
+    all_evidence = Evidence.query.all()
+    return render_template('dashboard.html', user_role=session['role'], evidence=all_evidence)
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    # Access Control: Only Investigators and Analysts can upload 
+    if session.get('role') == 'Legal Auditor':
+        return "Access Denied: Auditors cannot upload evidence."
+
+    file = request.files['evidence_file']
+    file_data = file.read()
+
+    # --- 1. Encryption (AES-256 Symmetric) ---
+    # We generate a random key and IV for every file 
+    aes_key = os.urandom(32)
+    iv = os.urandom(16)
+    cipher = Cipher(algorithms.AES(aes_key), modes.CFB(iv))
+    encryptor = cipher.encryptor()
+    encrypted_bytes = encryptor.update(file_data) + encryptor.finalize()
+
+    # --- 2. Digital Signature (RSA + SHA-256) ---
+    # We sign the ORIGINAL data to ensure it hasn't changed 
+    signature = private_key.sign(
+        file_data,
+        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+        hashes.SHA256()
+    )
+
+    # --- 3. Encoding (Base64) ---
+    # Convert binary to text for storage 
+    encoded_data = base64.b64encode(iv + encrypted_bytes).decode('utf-8')
+    encoded_sig = base64.b64encode(signature).decode('utf-8')
+
+    new_evidence = Evidence(
+        filename=file.filename,
+        encrypted_data=encoded_data,
+        signature=encoded_sig,
+        uploader=User.query.get(session['user_id']).username
+    )
+    db.session.add(new_evidence)
+    db.session.commit()
+    
+    return redirect(url_for('dashboard'))
 
 # --- 2. Home/Login Route (Single-Factor Auth) ---
 @app.route('/', methods=['GET', 'POST'])
@@ -48,18 +117,19 @@ def mfa_verify():
         return redirect(url_for('home'))
 
     if request.method == 'POST':
-        otp = request.form.get('otp')
-        # [cite_start]Simulation of possession factor [cite: 16]
-        if otp == "123456":
-            user = User.query.get(session['temp_user_id'])
-            session['user_id'] = user.id
-            session['role'] = user.role # Set role for Access Control [cite: 16]
-            session.pop('temp_user_id', None)
-            return "Logged In Successfully to Dashboard!" # We will build dashboard next
+        otp_input = request.form.get('otp')
+        user = User.query.get(session['temp_user_id'])
         
-        return "Invalid OTP"
+        # Verify the code using the stored secret 
+        totp = pyotp.TOTP(user.mfa_secret)
+        if totp.verify(otp_input):
+            session['user_id'] = user.id
+            session['role'] = user.role
+            session.pop('temp_user_id', None)
+            return redirect(url_for('dashboard'))
+        
+        return "Invalid MFA Code. Access Denied."
     return render_template('mfa.html')
-
 # --- 4. Registration Route ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -68,13 +138,24 @@ def register():
         pw = request.form.get('password')
         role = request.form.get('role')
         
-        # [cite_start]Hashing with Salt implementation [cite: 16]
         hashed_pw = bcrypt.generate_password_hash(pw).decode('utf-8')
+        # Generate a random 16-character secret [cite: 5]
+        mfa_secret = pyotp.random_base32()
         
-        new_user = User(username=user, password_hash=hashed_pw, role=role)
+        new_user = User(username=user, password_hash=hashed_pw, role=role, mfa_secret=mfa_secret)
         db.session.add(new_user)
         db.session.commit()
-        return redirect(url_for('home'))
+
+        # Generate QR Code for Google Authenticator [cite: 5, 16]
+        totp = pyotp.TOTP(mfa_secret)
+        provisioning_uri = totp.provisioning_uri(name=user, issuer_name="EvidenceVault")
+        
+        img = qrcode.make(provisioning_uri)
+        buf = io.BytesIO()
+        img.save(buf)
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+
+        return render_template('mfa_setup.html', qr_code=qr_b64, secret=mfa_secret)
     return render_template('register.html')
 
 # Initialize the database

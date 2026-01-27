@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MFA Setup</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: white; text-align: center; padding-top: 50px; }
+        .setup-box { display: inline-block; padding: 30px; border: 2px solid #2ea043; border-radius: 12px; background: #161b22; max-width: 400px; }
+        h2 { color: #2ea043; }
+        .qr-container { background: white; padding: 10px; display: inline-block; border-radius: 8px; margin: 20px 0; }
+        .btn { background: #238636; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 6px; font-weight: bold; text-decoration: none; display: block; }
+    </style>
+</head>
+<body>
+    <div class="setup-box">
+        <h2>Secure MFA Setup</h2>
+        <p>Scan this QR code with Google Authenticator or Authy to link your investigator identity.</p>
+        
+        <div class="qr-container">
+            <img src="data:image/png;base64,{{ qr_code }}" alt="MFA QR Code", style="width: 220px; height: 220px;">
+        </div>
+
+        <p style="font-size: 13px; color: #8b949e;">Secret Key: <code>{{ secret }}</code></p>
+        <a href="/" class="btn">I've Scanned It - Go to Login</a>
+    </div>
+</body>
+</html>

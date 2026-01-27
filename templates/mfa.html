@@ -6,17 +6,18 @@
         body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: white; text-align: center; padding-top: 100px; }
         .mfa-box { display: inline-block; padding: 30px; border: 2px solid #58a6ff; border-radius: 12px; background: #161b22; }
         h2 { color: #58a6ff; }
-        input { display: block; margin: 20px auto; padding: 12px; width: 200px; text-align: center; font-size: 24px; letter-spacing: 5px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; }
-        button { background: #58a6ff; border: none; padding: 12px 24px; cursor: pointer; border-radius: 6px; font-weight: bold; width: 100%; color: white; }
+        input { display: block; margin: 20px auto; padding: 12px; width: 220px; text-align: center; font-size: 28px; letter-spacing: 5px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; font-weight: bold; }
+        button { background: #58a6ff; border: none; padding: 12px 24px; cursor: pointer; border-radius: 6px; font-weight: bold; width: 100%; color: white; font-size: 16px; }
+        button:hover { background: #1f6feb; }
     </style>
 </head>
 <body>
     <div class="mfa-box">
         <h2>Identity Verification</h2>
-        <p style="color: #8b949e;">A simulated code was sent to your device.</p>
-        <p style="font-weight: bold; color: #f85149;">Test Code: 123456</p>
+        <p style="color: #8b949e;">Enter the 6-digit code from your Authenticator app.</p>
+        
         <form action="/mfa" method="post">
-            <input type="text" name="otp" placeholder="000000" maxlength="6" required autofocus>
+            <input type="text" name="otp" placeholder="000000" maxlength="6" required autofocus autocomplete="off">
             <button type="submit">Verify & Enter Vault</button>
         </form>
     </div>

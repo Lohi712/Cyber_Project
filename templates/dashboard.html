@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Secure Vault Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: white; padding: 40px; }
+        .header { border-bottom: 2px solid #30363d; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: #238636; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #30363d; }
+        .btn-upload { background: #238636; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Digital Evidence Vault</h1>
+        <div>
+            <span>User: <strong>{{ session.username }}</strong></span> | 
+            <span class="badge">{{ user_role }}</span>
+        </div>
+    </div>
+
+    {% if user_role != 'Legal Auditor' %}
+    <div class="card">
+        <h3>Secure Evidence Upload</h3>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <input type="file" name="evidence_file" required>
+            <button type="submit" class="btn-upload">Encrypt & Upload</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <h3>Evidence Log (Chain of Custody)</h3>
+        <table>
+            <tr>
+                <th>File Name</th>
+                <th>Uploader</th>
+                <th>Status</th>
+                <th>Integrity Check</th>
+            </tr>
+            {% for item in evidence %}
+            <tr>
+                <td>{{ item.filename }}</td>
+                <td>{{ item.uploader }}</td>
+                <td><span style="color: #238636;">AES-256 Encrypted</span></td>
+                <td><small style="color: #8b949e;">Signed: {{ item.signature[:20] }}...</small></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>
