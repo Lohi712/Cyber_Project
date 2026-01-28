@@ -1,26 +1,164 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>MFA Setup</title>
+    <meta charset="UTF-8">
+    <title>Protocol Sync | Secure MFA</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: white; text-align: center; padding-top: 50px; }
-        .setup-box { display: inline-block; padding: 30px; border: 2px solid #2ea043; border-radius: 12px; background: #161b22; max-width: 400px; }
-        h2 { color: #2ea043; }
-        .qr-container { background: white; padding: 10px; display: inline-block; border-radius: 8px; margin: 20px 0; }
-        .btn { background: #238636; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 6px; font-weight: bold; text-decoration: none; display: block; }
+        :root {
+            --hacker-green: #00ff41;
+            --hacker-dark: #080b10;
+            --glow: 0 0 15px rgba(0, 255, 65, 0.4);
+        }
+
+        body { 
+            font-family: 'Courier New', Courier, monospace; 
+            background: var(--hacker-dark); 
+            color: var(--hacker-green); 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* CRT Terminal Scanlines */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 10;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .setup-box { 
+            position: relative;
+            padding: 40px; 
+            border: 1px solid var(--hacker-green); 
+            background: rgba(13, 17, 23, 0.9);
+            box-shadow: var(--glow);
+            border-radius: 2px;
+            z-index: 5;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        /* HUD Identifier */
+        .setup-box::before {
+            content: "[MFA_SYNC_PROTOCOL_V2]";
+            position: absolute;
+            top: -12px;
+            left: 15px;
+            background: var(--hacker-dark);
+            padding: 0 10px;
+            font-size: 11px;
+            letter-spacing: 2px;
+        }
+
+        h2 { 
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            color: var(--hacker-green);
+        }
+
+        p {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #8b949e;
+            margin-bottom: 20px;
+        }
+
+        /* QR Container with Cyber Frame */
+        .qr-wrapper {
+            position: relative;
+            display: inline-block;
+            padding: 15px;
+            border: 1px dashed var(--hacker-green);
+            margin: 10px 0;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .qr-container { 
+            background: white; 
+            padding: 10px; 
+            display: inline-block; 
+            border-radius: 2px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .secret-display {
+            background: #05070a;
+            border: 1px solid #30363d;
+            padding: 10px;
+            margin: 20px 0;
+            font-size: 11px;
+        }
+
+        code {
+            color: var(--hacker-green);
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        .btn { 
+            background: var(--hacker-green); 
+            color: black; 
+            border: 1px solid var(--hacker-green); 
+            padding: 14px 28px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            text-decoration: none; 
+            display: block; 
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: 0.4s;
+        }
+
+        .btn:hover {
+            background: transparent;
+            color: var(--hacker-green);
+            box-shadow: var(--glow);
+        }
+
+        /* Decorative Pulse effect for the QR wrap */
+        .qr-wrapper::after {
+            content: "";
+            position: absolute;
+            top: -5px; left: -5px; right: -5px; bottom: -5px;
+            border: 1px solid var(--hacker-green);
+            opacity: 0.3;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.3; }
+            100% { transform: scale(1.1); opacity: 0; }
+        }
     </style>
 </head>
 <body>
     <div class="setup-box">
-        <h2>Secure MFA Setup</h2>
-        <p>Scan this QR code with Google Authenticator or Authy to link your investigator identity.</p>
+        <h2>Establish_MFA_Link</h2>
+        <p>Biometric simulation bypassed. Scan the encrypted matrix below with Google Authenticator to synchronize your investigator node.</p>
         
-        <div class="qr-container">
-            <img src="data:image/png;base64,{{ qr_code }}" alt="MFA QR Code", style="width: 220px; height: 220px;">
+        <div class="qr-wrapper">
+            <div class="qr-container">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="MFA QR Code" style="width: 200px; height: 200px;">
+            </div>
         </div>
 
-        <p style="font-size: 13px; color: #8b949e;">Secret Key: <code>{{ secret }}</code></p>
-        <a href="/" class="btn">I've Scanned It - Go to Login</a>
+        <div class="secret-display">
+            <span style="color: #8b949e;">MANUAL_OVERRIDE_KEY:</span><br>
+            <code>{{ secret }}</code>
+        </div>
+
+        <a href="/" class="btn">Confirm_Synchronization</a>
     </div>
 </body>
 </html>

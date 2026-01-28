@@ -1,54 +1,174 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Vault Registration</title>
+    <meta charset="UTF-8">
+    <title>Vault Initialization | New Identity</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d1117; color: white; text-align: center; padding-top: 100px; }
-        .box { display: inline-block; padding: 30px; border: 2px solid #2ea043; border-radius: 12px; background: #161b22; }
-        h2 { color: #2ea043; }
-        input, select { display: block; margin: 15px auto; padding: 12px; width: 250px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; }
-        button { background: #238636; border: none; padding: 12px 24px; cursor: pointer; border-radius: 6px; font-weight: bold; width: 100%; }
-        .nav-link { margin-top: 20px; display: block; color: #58a6ff; text-decoration: none; font-size: 14px; }
+        :root {
+            --hacker-green: #00ff41;
+            --hacker-dark: #080b10;
+            --glow: 0 0 12px rgba(0, 255, 65, 0.35);
+        }
+
+        body { 
+            font-family: 'Courier New', Courier, monospace; 
+            background: var(--hacker-dark); 
+            color: var(--hacker-green); 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* CRT Terminal Scanlines */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 10;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .box { 
+            position: relative;
+            padding: 45px; 
+            border: 1px solid var(--hacker-green); 
+            background: rgba(13, 17, 23, 0.95);
+            box-shadow: var(--glow);
+            border-radius: 2px;
+            z-index: 5;
+            width: 400px;
+            text-align: center;
+        }
+
+        /* Tactical HUD Corner Elements */
+        .box::before {
+            content: "[REGISTER_NEW_NODE]";
+            position: absolute;
+            top: -12px;
+            left: 15px;
+            background: var(--hacker-dark);
+            padding: 0 8px;
+            font-size: 11px;
+            letter-spacing: 2px;
+        }
+
+        h2 { 
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 30px;
+            font-size: 1.3rem;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.15);
+            padding-bottom: 15px;
+        }
+
+        input, select { 
+            display: block; 
+            margin: 15px auto; 
+            padding: 14px; 
+            width: 90%; 
+            border: 1px solid #30363d; 
+            background: #05070a; 
+            color: var(--hacker-green); 
+            font-family: inherit;
+            outline: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        input:focus, select:focus {
+            border-color: var(--hacker-green);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+            transform: scale(1.02);
+        }
+
+        select option {
+            background: #0d1117;
+            color: var(--hacker-green);
+        }
+
+        button { 
+            background: var(--hacker-green); 
+            border: 1px solid var(--hacker-green); 
+            padding: 16px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            width: 100%; 
+            color: black; 
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 15px;
+            transition: 0.4s;
+        }
+
+        button:hover {
+            background: transparent;
+            color: var(--hacker-green);
+            box-shadow: var(--glow);
+        }
+
+        .nav-link { 
+            margin-top: 30px;
+            display: block;
+            color: #58a6ff; 
+            text-decoration: none; 
+            font-size: 11px; 
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+
+        .nav-link:hover { 
+            color: var(--hacker-green); 
+            opacity: 1;
+            text-shadow: 0 0 5px var(--hacker-green);
+        }
+
         .error-alert {
-        background: rgba(248, 81, 73, 0.15);
-        border: 1px solid #f85149;
-        color: #f85149;
-        padding: 15px;
-        border-radius: 6px;
-        margin-bottom: 20px;
-        font-size: 14px;
-        display: flex;
-        align-items: center;
-        animation: shake 0.5s ease-in-out;
-    }
-    @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
-    }
-    .error-icon { margin-right: 10px; font-weight: bold; font-size: 18px; }
+            background: rgba(248, 81, 73, 0.08);
+            border: 1px solid #f85149;
+            color: #f85149;
+            padding: 12px;
+            margin-bottom: 25px;
+            font-size: 10px;
+            text-transform: uppercase;
+            animation: glitch-vibrate 0.7s;
+        }
+
+        @keyframes glitch-vibrate {
+            from { transform: translateX(-1px); }
+            to { transform: translateX(1px); }
+        }
     </style>
 </head>
 <body>
     <div class="box">
-        <h2>Register Investigator</h2>
-        <form action="/register" method="post">
-            <input type="text" name="username" placeholder="Choose Username" required>
-            <input type="password" name="password" placeholder="Secure Password" required>
-            <select name="role">
-                <option value="Investigator">Investigator</option>
-                <option value="Lead Analyst">Lead Analyst</option>
-                <option value="Legal Auditor">Legal Auditor</option>
-            </select>
-            <button type="submit">Create Identity</button>
-        </form>
-        <a href="/" class="nav-link">Already have an identity? Login here</a>
+        <h2>_Initialize_Identity</h2>
+        
         {% if error_msg %}
         <div class="error-alert">
-        <span class="error-icon">⚠</span>
-        <span>{{ error_msg }}</span>
+            [ACCESS_DENIED]: {{ error_msg }}
         </div>
         {% endif %}
+
+        <form action="/register" method="post">
+            <input type="text" name="username" placeholder="ASSIGN_OPERATOR_ID" required autocomplete="off">
+            <input type="password" name="password" placeholder="SET_RSA_PASSPHRASE" required>
+            
+            <select name="role">
+                <option value="Investigator">ROLE: FIELD_INVESTIGATOR</option>
+                <option value="Lead Analyst">ROLE: SYSTEM_ANALYST</option>
+                <option value="Legal Auditor">ROLE: LEGAL_VERIFIER</option>
+            </select>
+            
+            <button type="submit">Establish_Protocol</button>
+        </form>
+        
+        <a href="/" class="nav-link">>> IDENTITY_DETECTION_ACTIVE? RETURN_TO_PORTAL</a>
     </div>
 </body>
 </html>

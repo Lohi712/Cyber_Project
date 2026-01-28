@@ -53,7 +53,7 @@ def dashboard():
     
     # Authorization: Fetch all evidence to display [cite: 16]
     all_evidence = Evidence.query.all()
-    return render_template('dashboard.html', user_role=session['role'], evidence=all_evidence)
+    return render_template('dashboard.html', user_role=session.get('role'), evidence=all_evidence)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -189,37 +189,48 @@ def mfa_verify():
 
 # --- 4. Registration Route ---
 @app.route('/register', methods=['GET', 'POST'])
+@app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         user = request.form.get('username')
         pw = request.form.get('password')
         role = request.form.get('role')
+        if len(pw) < 8:
+            return render_template('register.html', error_msg="INSUFFICIENT_ENTROPY: Passphrase must be at least 8 characters.")
 
-        existing_user = User.query.filter_by(username=user).first()
-        if existing_user:
-            # Instead of a plain error, we pass a message to a specialized view
-            return render_template('register.html', error_msg="Duplicate Entity Detected: This username is already registered in the vault.")
-        
-        hashed_pw = bcrypt.generate_password_hash(pw).decode('utf-8')
-        # Generate a random 16-character secret [cite: 5]
-        mfa_secret = pyotp.random_base32()
-        
-        new_user = User(username=user, password_hash=hashed_pw, role=role, mfa_secret=mfa_secret)
-        db.session.add(new_user)
-        db.session.commit()
+        # 2. Common Password Blacklist
+        common_passwords = ["12345678", "password", "qwertyuiop", "admin123", "vault123","123"]
+        if pw.lower() in common_passwords:
+            return render_template('register.html', error_msg="VULNERABILITY_DETECTED: This password is too common and easily cracked.")
+        # Check if DB is busy/locked
+        try:
+            existing_user = User.query.filter_by(username=user).first()
+            if existing_user:
+                return render_template('register.html', error_msg="Identity already established in vault.")
+            
+            hashed_pw = bcrypt.generate_password_hash(pw).decode('utf-8')
+            mfa_secret = pyotp.random_base32()
+            
+            new_user = User(username=user, password_hash=hashed_pw, role=role, mfa_secret=mfa_secret)
+            db.session.add(new_user)
+            db.session.commit() # This is where the 'locked' error happens
 
-        # Generate QR Code for Google Authenticator [cite: 5, 16]
-        totp = pyotp.TOTP(mfa_secret)
-        provisioning_uri = totp.provisioning_uri(name=user, issuer_name="EvidenceVault")
-        
-        img = qrcode.make(provisioning_uri)
-        buf = io.BytesIO()
-        img.save(buf)
-        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+            # QR Generation logic
+            totp = pyotp.TOTP(mfa_secret)
+            provisioning_uri = totp.provisioning_uri(name=user, issuer_name="ForensicVault")
+            img = qrcode.make(provisioning_uri)
+            buf = io.BytesIO()
+            img.save(buf)
+            qr_b64 = base64.b64encode(buf.getvalue()).decode()
 
-        return render_template('mfa_setup.html', qr_code=qr_b64, secret=mfa_secret)
+            # Pass variables to your beautiful MFA Sync page
+            return render_template('mfa_setup.html', qr_code=qr_b64, secret=mfa_secret)
+            
+        except Exception as e:
+            db.session.rollback() # Release the lock if it fails
+            return f"Database Busy: Please close DB Browser and try again. Error: {e}"
+
     return render_template('register.html')
-
 # --- Object 4: Integrity Verification Route ---
 
 @app.route('/verify/<int:id>')

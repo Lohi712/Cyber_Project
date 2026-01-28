@@ -1,27 +1,170 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Integrity Audit Report</title>
+    <meta charset="UTF-8">
+    <title>Integrity Manifest | Digital Evidence Vault</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: white; padding: 50px; text-align: center; }
-        .report-box { display: inline-block; background: #161b22; border: 2px solid #58a6ff; padding: 40px; border-radius: 12px; max-width: 600px; text-align: left; }
-        .status-pass { color: #238636; font-weight: bold; border: 1px solid #238636; padding: 10px; border-radius: 4px; display: block; text-align: center; margin: 20px 0; }
-        code { background: #0d1117; padding: 10px; display: block; word-break: break-all; color: #8b949e; border-radius: 4px; font-size: 12px; }
+        :root {
+            --hacker-blue: #58a6ff;
+            --hacker-green: #00ff41;
+            --hacker-dark: #080b10;
+            --glow-blue: 0 0 15px rgba(88, 166, 255, 0.3);
+        }
+
+        body { 
+            font-family: 'Courier New', Courier, monospace; 
+            background: var(--hacker-dark); 
+            color: white; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* CRT Terminal Scanlines */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(88, 166, 255, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            z-index: 10;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .report-box { 
+            position: relative;
+            padding: 40px; 
+            border: 1px solid var(--hacker-blue); 
+            background: rgba(13, 17, 23, 0.95);
+            box-shadow: var(--glow-blue);
+            border-radius: 2px;
+            z-index: 5;
+            width: 550px;
+            text-align: left;
+        }
+
+        /* Tactical Header Decoration */
+        .report-box::before {
+            content: "[INTEL_INTEGRITY_MANIFEST_v4.0]";
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: var(--hacker-dark);
+            padding: 0 10px;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--hacker-blue);
+        }
+
+        h2 { 
+            color: var(--hacker-blue); 
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 0;
+            font-size: 1.4rem;
+            border-bottom: 1px solid rgba(88, 166, 255, 0.2);
+            padding-bottom: 15px;
+        }
+
+        .data-point {
+            margin: 15px 0;
+            font-size: 13px;
+        }
+
+        .label {
+            color: var(--hacker-blue);
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .status-badge { 
+            background: rgba(0, 255, 65, 0.1);
+            color: var(--hacker-green); 
+            font-weight: bold; 
+            border: 1px solid var(--hacker-green); 
+            padding: 12px; 
+            border-radius: 2px; 
+            display: block; 
+            text-align: center; 
+            margin: 25px 0; 
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        .sig-header {
+            font-size: 11px;
+            color: #8b949e;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        code { 
+            background: #05070a; 
+            padding: 15px; 
+            display: block; 
+            word-break: break-all; 
+            color: #8b949e; 
+            border: 1px solid #30363d;
+            border-radius: 2px; 
+            font-size: 10px; 
+            line-height: 1.4;
+        }
+
+        .footer-meta {
+            margin-top: 25px;
+            font-size: 10px;
+            color: #5d6771;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #30363d;
+            padding-top: 15px;
+        }
+
+        .back-btn { 
+            color: var(--hacker-blue); 
+            text-decoration: none; 
+            display: inline-block; 
+            margin-top: 25px;
+            font-size: 12px;
+            transition: 0.3s;
+        }
+
+        .back-btn:hover {
+            color: var(--hacker-green);
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div class="report-box">
-        <h2 style="color: #58a6ff; margin-top: 0;">Integrity Verification Report</h2>
-        <p><strong>Case Evidence:</strong> {{ item.filename }}</p>
-        <p><strong>Uploader:</strong> {{ item.uploader }}</p>
+        <h2>_VERIFICATION_MANIFEST</h2>
         
-        <div class="status-pass">VERIFICATION STATUS: {{ status }}</div>
+        <div class="data-point">
+            <span class="label">CASE_IDENT:</span> {{ item.filename }}
+        </div>
+        <div class="data-point">
+            <span class="label">ORIGIN_NODE:</span> {{ item.uploader }}
+        </div>
         
-        <p><strong>Digital Signature (RSA-2048):</strong></p>
+        <div class="status-badge">
+            VERIFICATION_{{ status }}
+        </div>
+        
+        <div class="sig-header">RSA-2048_DIGITAL_SIGNATURE_BLOCK:</div>
         <code>{{ item.signature }}</code>
         
-        <p><strong>Audit Timestamp:</strong> 2026-01-27 23:30:14</p>
-        <a href="/dashboard" style="color: #58a6ff; text-decoration: none; display: block; margin-top: 20px;">← Back to Dashboard</a>
+        <div class="footer-meta">
+            <span>AUDIT_TIMESTAMP: 2026-01-28 17:30:14</span>
+            <span>STATUS: [SECURE]</span>
+        </div>
+        
+        <a href="/dashboard" class="back-btn">← RETURN_TO_COMMAND_CENTER</a>
     </div>
 </body>
 </html>

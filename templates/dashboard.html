@@ -1,90 +1,218 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Secure Vault Dashboard</title>
+    <meta charset="UTF-8">
+    <title>Command Center | Digital Evidence Vault</title>
     <style>
-        /* Professional Dark Theme */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0d1117; color: #c9d1d9; padding: 40px; margin: 0; }
-        .container { max-width: 1000px; margin: auto; }
+        :root {
+            --hacker-green: #00ff41;
+            --hacker-blue: #58a6ff;
+            --hacker-dark: #080b10;
+            --system-red: #f85149;
+            --analyst-gold: #d29922;
+        }
+
+        body { 
+            font-family: 'Courier New', Courier, monospace; 
+            background: var(--hacker-dark); 
+            color: #c9d1d9; 
+            margin: 0; 
+            padding: 40px;
+            overflow-x: hidden;
+        }
+
+        /* CRT Terminal Scanlines */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            z-index: 100;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            position: fixed;
+        }
+
+        .container { max-width: 1100px; margin: auto; position: relative; z-index: 5; }
         
-        /* Header & Badges */
-        .header { border-bottom: 2px solid #30363d; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-        h1 { color: #58a6ff; margin: 0; }
-        .role-badge { padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; background: #238636; color: white; text-transform: uppercase; }
+        /* Tactical Header */
+        .header { 
+            border-bottom: 1px solid #30363d; 
+            padding-bottom: 20px; 
+            margin-bottom: 40px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+
+        h1 { color: var(--hacker-green); margin: 0; letter-spacing: 5px; font-size: 1.5rem; text-transform: uppercase; }
         
-        /* Object 1: Upload Card */
-        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-        h3 { margin-top: 0; color: #f0f6fc; border-left: 4px solid #238636; padding-left: 10px; }
+        .role-badge { 
+            padding: 4px 12px; 
+            border-radius: 2px; 
+            font-size: 11px; 
+            font-weight: bold; 
+            border: 1px solid var(--hacker-green);
+            color: var(--hacker-green);
+            text-transform: uppercase;
+        }
+
+        .logout-btn {
+            color: var(--system-red);
+            text-decoration: none;
+            font-size: 11px;
+            border: 1px solid var(--system-red);
+            padding: 5px 15px;
+            margin-left: 20px;
+            transition: 0.3s;
+        }
+        .logout-btn:hover { background: rgba(248, 81, 73, 0.1); }
+
+        /* Tactical Cards */
+        .card { 
+            background: rgba(22, 27, 34, 0.7); 
+            border: 1px solid #30363d; 
+            padding: 30px; 
+            margin-bottom: 30px; 
+            position: relative;
+        }
+
+        .card::before {
+            content: attr(data-label);
+            position: absolute;
+            top: -10px;
+            left: 15px;
+            background: var(--hacker-dark);
+            padding: 0 8px;
+            font-size: 10px;
+            color: var(--hacker-blue);
+            letter-spacing: 2px;
+        }
+
+        h3 { margin-top: 0; color: var(--hacker-blue); font-size: 14px; text-transform: uppercase; letter-spacing: 2px; }
         
-        /* Form & Buttons */
-        input[type="file"] { background: #0d1117; border: 1px solid #30363d; padding: 10px; border-radius: 6px; color: #c9d1d9; width: 70%; }
-        .btn-main { background: #238636; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn-main:hover { background: #2ea043; }
-        
-        /* Object 2: Evidence Table */
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { text-align: left; padding: 15px; background: #21262d; color: #8b949e; border-bottom: 2px solid #30363d; }
-        td { padding: 15px; border-bottom: 1px solid #30363d; }
-        
-        /* Object 3: Actions */
-        .status-enc { color: #3fb950; font-weight: bold; font-size: 12px; }
-        .btn-delete { color: #f85149; text-decoration: none; font-size: 13px; font-weight: bold; border: 1px solid #f85149; padding: 4px 8px; border-radius: 4px; }
-        .btn-delete:hover { background: rgba(248, 81, 73, 0.1); }
+        /* Form Styling */
+        input[type="file"] { 
+            background: #05070a; 
+            border: 1px solid #30363d; 
+            padding: 12px; 
+            color: #8b949e; 
+            width: 60%; 
+            font-family: inherit;
+        }
+
+        .btn-main { 
+            background: var(--hacker-green); 
+            color: black; 
+            border: none; 
+            padding: 13px 25px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: 0.3s;
+        }
+        .btn-main:hover { box-shadow: 0 0 15px var(--hacker-green); }
+
+        /* Evidence Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+        th { text-align: left; padding: 15px; background: #161b22; color: var(--hacker-blue); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #30363d; }
+        td { padding: 15px; border-bottom: 1px solid #21262d; }
+        tr:hover { background: rgba(88, 166, 255, 0.05); }
+
+        /* Status & Actions */
+        .status-enc { 
+            color: var(--hacker-green); 
+            font-weight: bold; 
+            font-size: 11px; 
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .action-link { 
+            color: var(--hacker-blue); 
+            text-decoration: none; 
+            font-weight: bold; 
+            margin-right: 15px;
+        }
+        .action-link:hover { text-decoration: underline; }
+
+        .btn-delete { 
+            color: var(--system-red); 
+            border: 1px solid var(--system-red); 
+            padding: 4px 8px; 
+            text-decoration: none;
+            font-size: 11px;
+        }
+        .btn-delete:hover { background: var(--system-red); color: black; }
+
+        .btn-verify {
+            background: var(--analyst-gold);
+            color: black;
+            text-decoration: none;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Evidence Vault</h1>
+            <h1>Forensic_Vault_Terminal</h1>
             <div>
-                <span style="margin-right: 15px;">Investigator: <strong>{{ session.get('username', 'User') }}</strong></span>
-                <span class="role-badge">{{ user_role }}</span>
-
-                <a href="/logout" style="color: #f85149; text-decoration: none; font-weight: bold; border: 1px solid #f85149; padding: 5px 12px; border-radius: 6px; font-size: 13px;">Logout / Switch Account</a>
+                <span style="font-size: 12px; color: #8b949e;">NODE_OP: <strong style="color: white;">{{ session.get('username', 'User') }}</strong></span>
+                <span class="role-badge" style="margin-left: 10px;">{{ user_role }}</span>
+                <a href="/logout" class="logout-btn">TERMINATE_SESSION</a>
             </div>
         </div>
 
         {% if user_role in ['Lead Analyst', 'Investigator'] %}
-        <div class="card">
-            <h3>Secure File Upload</h3>
-            <p style="font-size: 14px; color: #8b949e;">Files are encrypted using AES-256 and signed with RSA before storage.</p>
+        <div class="card" data-label="[DATA_INGESTION_MODULE]">
+            <h3>Secure_Evidence_Upload</h3>
+            <p style="font-size: 11px; color: #8b949e; margin-bottom: 20px;">AUTOMATED PROTOCOL: AES-256-CFB Encryption + RSA-2048 Digital Signature.</p>
             <form action="/upload" method="post" enctype="multipart/form-data">
                 <input type="file" name="evidence_file" required>
-                <button type="submit" class="btn-main">Encrypt & Sign</button>
+                <button type="submit" class="btn-main">EXECUTE_UPLOAD</button>
             </form>
         </div>
         {% endif %}
 
-        <div class="card">
-            <h3>Chain of Custody (Encrypted Log)</h3>
+        <div class="card" data-label="[CHAIN_OF_CUSTODY_LOG]">
+            <h3>Active_Evidence_Inventory</h3>
             <table>
                 <thead>
                     <tr>
-                        <th>File Name</th>
-                        <th>Uploader</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th>FILE_NAME</th>
+                        <th>ORIGIN_SOURCE</th>
+                        <th>SECURITY_STATUS</th>
+                        <th>TACTICAL_ACTIONS</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in evidence %}
                     <tr>
-                        <td>{{ item.filename }}</td>
+                        <td style="color: white;">{{ item.filename }}</td>
                         <td>{{ item.uploader }}</td>
-                        <td><span class="status-enc">● AES-256 SECURED</span></td>
+                        <td><span class="status-enc">● SECURED_AES_256</span></td>
                         <td>
                             {% if user_role in ['Lead Analyst', 'Investigator'] %}
-                            <a href="/download/{{ item.id }}" style="color: #58a6ff; margin-left: 10px; text-decoration: none; font-weight: bold;">Download</a>
+                            <a href="/download/{{ item.id }}" class="action-link">DECRYPT_FILE</a>
                             {% endif %}
 
                             {% if user_role == 'Lead Analyst' %}
-                                <a href="/delete/{{ item.id }}" class="btn-delete" style="margin-left: 10px;">Delete</a>
+                                <a href="/delete/{{ item.id }}" class="btn-delete">PURGE</a>
                             {% endif %}
                             
                             {% if user_role == 'Legal Auditor' %}
-                               <a href="/verify/{{ item.id }}" style="background: #1f6feb; color: white; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: bold;">
-                                Review & Verify
-                                </a>
+                               <a href="/verify/{{ item.id }}" class="btn-verify">VERIFY_INTEGRITY</a>
                             {% endif %}
                         </td>
                     </tr>

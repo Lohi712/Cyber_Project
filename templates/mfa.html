@@ -1,47 +1,157 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>MFA Verification</title>
+    <meta charset="UTF-8">
+    <title>Identity Challenge | Secure Verification</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: white; text-align: center; padding-top: 100px; }
-        .mfa-box { display: inline-block; padding: 30px; border: 2px solid #58a6ff; border-radius: 12px; background: #161b22; }
-        h2 { color: #58a6ff; }
-        input { display: block; margin: 20px auto; padding: 12px; width: 220px; text-align: center; font-size: 28px; letter-spacing: 5px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; font-weight: bold; }
-        button { background: #58a6ff; border: none; padding: 12px 24px; cursor: pointer; border-radius: 6px; font-weight: bold; width: 100%; color: white; font-size: 16px; }
-        button:hover { background: #1f6feb; }
-        .mfa-error {
-        background: rgba(248, 81, 73, 0.1);
-        border: 1px solid #f85149;
-        color: #f85149;
-        padding: 12px;
-        border-radius: 6px;
-        margin-bottom: 20px;
-        font-size: 13px;
-        text-align: center;
-        animation: pulse-red 2s infinite;
-    }
+        :root {
+            --hacker-green: #00ff41;
+            --hacker-dark: #080b10;
+            --hacker-blue: #58a6ff;
+            --glow: 0 0 15px rgba(0, 255, 65, 0.4);
+        }
 
-    @keyframes pulse-red {
-        0% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.4); }
-        70% { box-shadow: 0 0 0 10px rgba(248, 81, 73, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0); }
-    }
+        body { 
+            font-family: 'Courier New', Courier, monospace; 
+            background: var(--hacker-dark); 
+            color: var(--hacker-green); 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* CRT Terminal Scanlines */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 10;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .mfa-box { 
+            position: relative;
+            padding: 45px; 
+            border: 1px solid var(--hacker-blue); 
+            background: rgba(13, 17, 23, 0.9);
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.2);
+            border-radius: 2px;
+            z-index: 5;
+            width: 400px;
+            text-align: center;
+        }
+
+        /* HUD Identifier - Changes color to blue to signify verification state */
+        .mfa-box::before {
+            content: "[CHALLENGE_RESPONSE_REQUIRED]";
+            position: absolute;
+            top: -12px;
+            left: 15px;
+            background: var(--hacker-dark);
+            padding: 0 10px;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--hacker-blue);
+        }
+
+        h2 { 
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            color: var(--hacker-blue);
+            border-bottom: 1px solid rgba(88, 166, 255, 0.2);
+            padding-bottom: 15px;
+        }
+
+        p {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #8b949e;
+            margin-bottom: 25px;
+        }
+
+        input { 
+            display: block; 
+            margin: 20px auto; 
+            padding: 15px; 
+            width: 80%; 
+            text-align: center; 
+            font-size: 32px; 
+            letter-spacing: 12px; 
+            border: 1px solid #30363d; 
+            background: #05070a; 
+            color: var(--hacker-green); 
+            font-family: inherit;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--hacker-blue);
+            box-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
+        }
+
+        button { 
+            background: var(--hacker-blue); 
+            border: 1px solid var(--hacker-blue); 
+            padding: 16px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            width: 100%; 
+            color: #0d1117; 
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            transition: 0.4s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: transparent;
+            color: var(--hacker-blue);
+            box-shadow: 0 0 15px rgba(88, 166, 255, 0.3);
+        }
+
+        .mfa-error {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid #f85149;
+            color: #f85149;
+            padding: 12px;
+            margin-top: 25px;
+            font-size: 10px;
+            text-transform: uppercase;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.4); border-color: #f85149; }
+            70% { box-shadow: 0 0 0 10px rgba(248, 81, 73, 0); border-color: rgba(248, 81, 73, 0.5); }
+            100% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0); border-color: #f85149; }
+        }
     </style>
 </head>
 <body>
     <div class="mfa-box">
-        <h2>Identity Verification</h2>
-        <p style="color: #8b949e;">Enter the 6-digit code from your Authenticator app.</p>
+        <h2>ID_VERIFICATION</h2>
+        <p>SECURE SESSION DETECTED. Decrypt and enter the 6-digit TOTP signature from your authorized device to establish connection.</p>
         
         <form action="/mfa" method="post">
-            <input type="text" name="otp" placeholder="000000" maxlength="6" required autofocus autocomplete="off">
-            <button type="submit">Verify & Enter Vault</button>
+            <input type="text" name="otp" placeholder="******" maxlength="6" required autofocus autocomplete="off">
+            <button type="submit">Validate_Response</button>
         </form>
+
         {% if error_msg %}
         <div class="mfa-error">
-        <strong>Verification Error:</strong> {{ error_msg }}
+            [FATAL_AUTH_FAILURE]: {{ error_msg }}
         </div>
-    {% endif %}
+        {% endif %}
     </div>
 </body>
 </html>
