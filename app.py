@@ -160,7 +160,7 @@ def home():
             session['temp_user_id'] = user.id
             return redirect(url_for('mfa_verify')) # Move to Step 2
         
-        return "Invalid Username or Password"
+        return render_template('login.html', error_msg="Access Denied: Invalid username or password.")
     return render_template('login.html')
 
 # --- 3. MFA Route (Multi-Factor Auth) ---

@@ -11,6 +11,14 @@
         .register-footer { margin-top: 25px; border-top: 1px solid #30363d; padding-top: 15px; }
         .nav-link { color: #58a6ff; text-decoration: none; font-size: 14px; font-weight: bold; }
         .nav-link:hover { text-decoration: underline; color: #1f6feb; }
+        .login-error {background: rgba(248, 81, 73, 0.1);border: 1px solid #f85149;color: #f85149;padding: 12px;border-radius: 6px;margin-bottom: 20px;font-size: 13px;display: flex;align-items: center;justify-content: center;animation: shake 0.4s ease-in-out;
+    }
+
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-8px); }
+        75% { transform: translateX(8px); }
+    }
     </style>
 </head>
 <body>
@@ -25,6 +33,11 @@
         <div class="register-footer">
             <span style="color: #8b949e; font-size: 14px;">New Investigator?</span>
             <a href="/register" class="nav-link">Create Account</a>
+            {% if error_msg %}
+            <div class="login-error">
+            <span style="margin-right: 8px;">❌</span> {{ error_msg }}
+            </div>
+            {% endif %}
         </div>
     </div>
 </body>
