@@ -10,6 +10,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from flask import send_file
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "secure_vault_key"
@@ -19,48 +20,94 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vault.db'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 
+PRIVATE_KEY_PATH = "private_key.pem"
+PUBLIC_KEY_PATH = "public_key.pem"
+
 # --- 1. User Model (Authentication & Hashing with Salt) ---
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), nullable=False)
-    # NEW: Store the unique 16-character MFA secret key [cite: 5, 16]
     mfa_secret = db.Column(db.String(32), nullable=False)
+    security_question = db.Column(db.String(200))
+    security_answer_hash = db.Column(db.String(128))
 
 # --- Evidence Model (Encryption & Hashing) ---
 class Evidence(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(100))
-    # Encoding: We store the encrypted binary as a Base64 string 
     encrypted_data = db.Column(db.Text) 
-    # Digital Signature: Proves authenticity and integrity 
     signature = db.Column(db.Text) 
     uploader = db.Column(db.String(50))
-    # Store AES key and IV as Base64 strings for each file
-    aes_key = db.Column(db.String(44))  # 32 bytes base64 encoded
-    iv = db.Column(db.String(24))       # 16 bytes base64 encoded
+    aes_key = db.Column(db.String(44))
+    iv = db.Column(db.String(24))
+    is_verified = db.Column(db.Boolean, default=False) 
+    verified_by = db.Column(db.String(50), nullable=True)
+    verified_at = db.Column(db.DateTime, nullable=True)
 
-# Generate a global RSA Key pair for this lab (Key Exchange/Signatures)
-# Note: In real life, these would be stored in .pem files 
-private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-public_key = private_key.public_key()
+# --- AccessLog Model (ONLY DEFINE ONCE!) ---
+class AccessLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    evidence_id = db.Column(db.Integer, db.ForeignKey('evidence.id'), nullable=False)
+    accessed_by = db.Column(db.String(50), nullable=False)
+    access_type = db.Column(db.String(20), nullable=False)
+    accessed_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+# ============================================
+# RSA KEY MANAGEMENT - FIXED VERSION
+# ============================================
+def load_or_generate_keys():
+    """Load existing RSA keys or generate new ones if they don't exist."""
+    if os.path.exists(PRIVATE_KEY_PATH) and os.path.exists(PUBLIC_KEY_PATH):
+        # Load existing keys
+        with open(PRIVATE_KEY_PATH, "rb") as f:
+            private_key = serialization.load_pem_private_key(f.read(), password=None)
+        with open(PUBLIC_KEY_PATH, "rb") as f:
+            public_key = serialization.load_pem_public_key(f.read())
+        print("[INFO] Loaded existing RSA keys from files.")
+    else:
+        # Generate new keys
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        public_key = private_key.public_key()
+        
+        # Save private key
+        with open(PRIVATE_KEY_PATH, "wb") as f:
+            f.write(private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            ))
+        
+        # Save public key
+        with open(PUBLIC_KEY_PATH, "wb") as f:
+            f.write(public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            ))
+        print("[INFO] Generated and saved new RSA keys.")
+    
+    return private_key, public_key
+
+# IMPORTANT: Call the function and assign to global variables!
+private_key, public_key = load_or_generate_keys()
+
+# ============================================
+# ROUTES
+# ============================================
 
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('home'))
     
-    # Authorization: Fetch all evidence to display [cite: 16]
     all_evidence = Evidence.query.all()
     return render_template('dashboard.html', user_role=session.get('role'), evidence=all_evidence)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    # Only Lead Analysts and Investigators can CREATE (Object 1)
     if session.get('role') not in ['Lead Analyst', 'Investigator']:
         return "Access Denied: Your role does not permit uploading evidence."
-    # Access Control: Only Investigators and Analysts can upload 
     if session.get('role') == 'Legal Auditor':
         return "Access Denied: Auditors cannot upload evidence."
 
@@ -70,7 +117,6 @@ def upload_file():
     file_data = file.read()
 
     # --- 1. Encryption (AES-256 Symmetric) ---
-    # We generate a random key and IV for every file 
     aes_key = os.urandom(32)
     iv = os.urandom(16)
     cipher = Cipher(algorithms.AES(aes_key), modes.CFB(iv))
@@ -78,7 +124,6 @@ def upload_file():
     encrypted_bytes = encryptor.update(file_data) + encryptor.finalize()
 
     # --- 2. Digital Signature (RSA + SHA-256) ---
-    # We sign the ORIGINAL data to ensure it hasn't changed 
     signature = private_key.sign(
         file_data,
         padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
@@ -86,7 +131,6 @@ def upload_file():
     )
 
     # --- 3. Encoding (Base64) ---
-    # Convert binary to text for storage 
     encoded_data = base64.b64encode(iv + encrypted_bytes).decode('utf-8')
     encoded_sig = base64.b64encode(signature).decode('utf-8')
     encoded_aes_key = base64.b64encode(aes_key).decode('utf-8')
@@ -96,7 +140,7 @@ def upload_file():
         filename=file.filename,
         encrypted_data=encoded_data,
         signature=encoded_sig,
-        uploader=User.query.get(session['user_id']).username,
+        uploader=session.get('username', 'Unknown'),
         aes_key=encoded_aes_key,
         iv=encoded_iv
     )
@@ -107,7 +151,6 @@ def upload_file():
 
 @app.route('/delete/<int:id>')
 def delete_evidence(id):
-    # Only Lead Analysts can DELETE (Object 3)
     if session.get('role') != 'Lead Analyst':
         return "Access Denied: Only a Lead Analyst can remove evidence from the vault."
     
@@ -119,23 +162,31 @@ def delete_evidence(id):
 
 @app.route('/download/<int:id>')
 def download_evidence(id):
-    # Authorization: Auditors can see logs, but maybe only Analysts/Investigators can download
     if session.get('role') == 'Legal Auditor':
         return "Access Denied: Auditors cannot download raw evidence files."
 
     item = Evidence.query.get(id)
     if not item:
         return "File not found."
+    
+    if session.get('username') != item.uploader:
+        access_log = AccessLog(
+            evidence_id=id,
+            accessed_by=session.get('username'),
+            access_type='download'
+        )
+        db.session.add(access_log)
+        db.session.commit()
 
     # --- Step 1: Base64 Decode ---
     raw_data = base64.b64decode(item.encrypted_data)
-    iv = base64.b64decode(item.iv)  # Retrieve IV from DB
-    aes_key = base64.b64decode(item.aes_key)  # Retrieve AES key from DB
+    iv = base64.b64decode(item.iv)
+    aes_key = base64.b64decode(item.aes_key)
     encrypted_bytes = raw_data[16:]
 
     # --- Step 2: AES Decryption ---
     cipher = Cipher(algorithms.AES(aes_key), modes.CFB(iv))
-    decryptor = cipher.decryptor() # Use decryptor for decryption
+    decryptor = cipher.decryptor()
     decrypted_data = decryptor.update(encrypted_bytes) + decryptor.finalize()
 
     # --- Step 3: Serve the File ---
@@ -145,25 +196,21 @@ def download_evidence(id):
         as_attachment=True
     )
 
-# --- 2. Home/Login Route (Single-Factor Auth) ---
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == 'POST':
         user_input = request.form.get('username')
         pass_input = request.form.get('password')
         
-        # [cite_start]Check database for identity [cite: 5, 10]
         user = User.query.filter_by(username=user_input).first()
         
-        # [cite_start]Verify hash match [cite: 16]
         if user and bcrypt.check_password_hash(user.password_hash, pass_input):
             session['temp_user_id'] = user.id
-            return redirect(url_for('mfa_verify')) # Move to Step 2
+            return redirect(url_for('mfa_verify'))
         
         return render_template('login.html', error_msg="Access Denied: Invalid username or password.")
     return render_template('login.html')
 
-# --- 3. MFA Route (Multi-Factor Auth) ---
 @app.route('/mfa', methods=['GET', 'POST'])
 def mfa_verify():
     if 'temp_user_id' not in session:
@@ -174,7 +221,6 @@ def mfa_verify():
         user = User.query.get(session['temp_user_id'])
         
         totp = pyotp.TOTP(user.mfa_secret)
-        # Added window to account for time drift
         if totp.verify(otp_input, valid_window=1):
             session['user_id'] = user.id
             session['role'] = user.role
@@ -182,60 +228,110 @@ def mfa_verify():
             session.pop('temp_user_id', None)
             return redirect(url_for('dashboard'))
         
-        # --- The Enhanced Error Trigger ---
         return render_template('mfa.html', error_msg="Authentication Failed: The MFA code entered is invalid or has expired.")
     
     return render_template('mfa.html')
 
-# --- 4. Registration Route ---
-@app.route('/register', methods=['GET', 'POST'])
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         user = request.form.get('username')
         pw = request.form.get('password')
         role = request.form.get('role')
+        q = request.form.get('security_question')
+        a = request.form.get('security_answer')
+
+        existing_user = User.query.filter_by(username=user).first()
+        if existing_user:
+            return render_template('register.html', error_msg="Duplicate Entity Detected.")
+        
         if len(pw) < 8:
-            return render_template('register.html', error_msg="INSUFFICIENT_ENTROPY: Passphrase must be at least 8 characters.")
+            return render_template('register.html', error_msg="Password too short (Min 8 chars).")
 
-        # 2. Common Password Blacklist
-        common_passwords = ["12345678", "password", "qwertyuiop", "admin123", "vault123","123"]
-        if pw.lower() in common_passwords:
-            return render_template('register.html', error_msg="VULNERABILITY_DETECTED: This password is too common and easily cracked.")
-        # Check if DB is busy/locked
+        hashed_pw = bcrypt.generate_password_hash(pw).decode('utf-8')
+        a_hash = bcrypt.generate_password_hash(a.lower().strip()).decode('utf-8')
+        mfa_secret = pyotp.random_base32()
+        
         try:
-            existing_user = User.query.filter_by(username=user).first()
-            if existing_user:
-                return render_template('register.html', error_msg="Identity already established in vault.")
-            
-            hashed_pw = bcrypt.generate_password_hash(pw).decode('utf-8')
-            mfa_secret = pyotp.random_base32()
-            
-            new_user = User(username=user, password_hash=hashed_pw, role=role, mfa_secret=mfa_secret)
+            new_user = User(
+                username=user, 
+                password_hash=hashed_pw, 
+                role=role, 
+                mfa_secret=mfa_secret,
+                security_question=q,
+                security_answer_hash=a_hash
+            )
             db.session.add(new_user)
-            db.session.commit() # This is where the 'locked' error happens
+            db.session.commit()
 
-            # QR Generation logic
             totp = pyotp.TOTP(mfa_secret)
-            provisioning_uri = totp.provisioning_uri(name=user, issuer_name="ForensicVault")
+            provisioning_uri = totp.provisioning_uri(name=user, issuer_name="EvidenceVault")
             img = qrcode.make(provisioning_uri)
             buf = io.BytesIO()
             img.save(buf)
             qr_b64 = base64.b64encode(buf.getvalue()).decode()
 
-            # Pass variables to your beautiful MFA Sync page
             return render_template('mfa_setup.html', qr_code=qr_b64, secret=mfa_secret)
             
         except Exception as e:
-            db.session.rollback() # Release the lock if it fails
-            return f"Database Busy: Please close DB Browser and try again. Error: {e}"
+            db.session.rollback()
+            return render_template('register.html', error_msg="Database Error: Close DB Browser and try again.")
 
     return render_template('register.html')
-# --- Object 4: Integrity Verification Route ---
+
+@app.route('/reset_password', methods=['GET', 'POST'])
+def reset_password():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        security_answer = request.form.get('security_answer')
+        new_password = request.form.get('new_password')
+        user = User.query.filter_by(username=username).first()
+        
+        if not user:
+            return render_template('reset.html', error_msg="IDENT_ID_NOT_FOUND")
+
+        if not security_answer:
+            return render_template('reset.html', 
+                                   username=username, 
+                                   security_question=user.security_question,
+                                   show_question=True)
+
+        provided_answer = security_answer.lower().strip()
+        if not bcrypt.check_password_hash(user.security_answer_hash, provided_answer):
+            return render_template('reset.html', 
+                                   username=username,
+                                   security_question=user.security_question,
+                                   show_question=True,
+                                   error_msg="RECOVERY_ANSWER_INVALID")
+        
+        if len(new_password) < 8:
+            return render_template('reset.html', 
+                                   username=username,
+                                   security_question=user.security_question,
+                                   show_question=True,
+                                   error_msg="PASSPHRASE_TOO_SHORT (Min 8 chars)")
+
+        user.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        db.session.commit()
+        
+        return render_template('login.html', success_msg="PASSPHRASE_UPDATED: Login with new credentials")
+        
+    return render_template('reset.html')
+
+@app.route('/access_log/<int:id>')
+def view_access_log(id):
+    item = Evidence.query.get(id)
+    if not item:
+        return "Evidence not found."
+    
+    if session.get('username') != item.uploader and session.get('role') != 'Lead Analyst':
+        return "Access Denied: You can only view logs for your own uploads."
+    
+    logs = AccessLog.query.filter_by(evidence_id=id).order_by(AccessLog.accessed_at.desc()).all()
+    return render_template('access_log.html', item=item, logs=logs)
 
 @app.route('/verify/<int:id>')
 def verify_integrity(id):
-    # Authorization check
     if session.get('role') not in ['Legal Auditor', 'Lead Analyst']:
         return "Access Denied."
 
@@ -244,19 +340,47 @@ def verify_integrity(id):
         return "Evidence not found."
 
     try:
-        # 1. Retrieve the public key (In this lab, we use the global one)
-        # 2. Decode the signature from Base64
-        sig_bytes = base64.b64encode(item.signature.encode('utf-8')) # This is for display/sim
+        aes_key = base64.b64decode(item.aes_key)
+        iv = base64.b64decode(item.iv)
+        raw_data = base64.b64decode(item.encrypted_data)
         
-        # 3. Logic: In a real demo, you'd compare the hash of decrypted file 
-        # with the signature. For the UI, we pass success status.
-        return render_template('verify_result.html', item=item, status="SECURE & AUTHENTIC")
+        encrypted_bytes = raw_data[16:]
+        cipher = Cipher(algorithms.AES(aes_key), modes.CFB(iv))
+        decryptor = cipher.decryptor()
+        decrypted_data = decryptor.update(encrypted_bytes) + decryptor.finalize()
+
+        signature_bytes = base64.b64decode(item.signature)
+        
+        public_key.verify(
+            signature_bytes,
+            decrypted_data,
+            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+            hashes.SHA256()
+        )
+        
+        return render_template('verify_result.html', item=item, status="PASS", can_confirm=True)
+
     except Exception as e:
-        return render_template('verify_result.html', item=item, status="TAMPERED / INVALID")
+        return render_template('verify_result.html', item=item, status="FAIL", can_confirm=False)
     
+@app.route('/confirm_verification/<int:id>', methods=['POST'])
+def confirm_verification(id):
+    if session.get('role') not in ['Legal Auditor', 'Lead Analyst']:
+        return "Access Denied."
+    
+    item = Evidence.query.get(id)
+    if not item:
+        return "Evidence not found."
+    
+    item.is_verified = True
+    item.verified_by = session.get('username')
+    item.verified_at = datetime.now()
+    db.session.commit()
+    
+    return redirect(url_for('dashboard'))
+
 @app.route('/logout')
 def logout():
-    # Clear all session data (user_id, role, username)
     session.clear()
     return redirect(url_for('home'))
 

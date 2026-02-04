@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Command Center | Digital Evidence Vault</title>
     <style>
         :root {
@@ -161,6 +162,13 @@
             font-size: 11px;
             font-weight: bold;
         }
+
+        .no-evidence {
+            text-align: center;
+            color: #8b949e;
+            padding: 40px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -179,7 +187,8 @@
             <h3>Secure_Evidence_Upload</h3>
             <p style="font-size: 11px; color: #8b949e; margin-bottom: 20px;">AUTOMATED PROTOCOL: AES-256-CFB Encryption + RSA-2048 Digital Signature.</p>
             <form action="/upload" method="post" enctype="multipart/form-data">
-                <input type="file" name="evidence_file" required>
+                <label for="evidence_file" style="font-size: 11px; color: #8b949e; margin-right: 10px;">EVIDENCE_FILE</label>
+                <input id="evidence_file" type="file" name="evidence_file" required title="Choose an evidence file to upload">
                 <button type="submit" class="btn-main">EXECUTE_UPLOAD</button>
             </form>
         </div>
@@ -187,38 +196,58 @@
 
         <div class="card" data-label="[CHAIN_OF_CUSTODY_LOG]">
             <h3>Active_Evidence_Inventory</h3>
+            
+            {% if evidence %}
             <table>
                 <thead>
                     <tr>
-                        <th>FILE_NAME</th>
-                        <th>ORIGIN_SOURCE</th>
-                        <th>SECURITY_STATUS</th>
-                        <th>TACTICAL_ACTIONS</th>
+                        <th>ID</th>
+                        <th>Filename</th>
+                        <th>Uploader</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in evidence %}
                     <tr>
-                        <td style="color: white;">{{ item.filename }}</td>
+                        <td><span class="status-enc">#{{ item.id }}</span></td>
+                        <td>{{ item.filename }}</td>
                         <td>{{ item.uploader }}</td>
-                        <td><span class="status-enc">● SECURED_AES_256</span></td>
+                        <td>
+                            {% if item.is_verified %}
+                            <span style="color: #00ff41;">✓ VERIFIED</span>
+                            <br><small style="color: #8b949e;">by {{ item.verified_by }}</small>
+                            {% else %}
+                            <span style="color: orange;">PENDING</span>
+                            {% endif %}
+                        </td>
                         <td>
                             {% if user_role in ['Lead Analyst', 'Investigator'] %}
-                            <a href="/download/{{ item.id }}" class="action-link">DECRYPT_FILE</a>
-                            {% endif %}
-
-                            {% if user_role == 'Lead Analyst' %}
-                                <a href="/delete/{{ item.id }}" class="btn-delete">PURGE</a>
+                            <a href="/download/{{ item.id }}" class="action-link">Download</a>
                             {% endif %}
                             
-                            {% if user_role == 'Legal Auditor' %}
-                               <a href="/verify/{{ item.id }}" class="btn-verify">VERIFY_INTEGRITY</a>
+                            {% if user_role in ['Legal Auditor', 'Lead Analyst'] %}
+                            <a href="/verify/{{ item.id }}" class="action-link">Verify</a>
+                            {% endif %}
+                            
+                            {% if session.get('username') == item.uploader or user_role == 'Lead Analyst' %}
+                            <a href="/access_log/{{ item.id }}" class="action-link">Logs</a>
+                            {% endif %}
+                            
+                            {% if user_role == 'Lead Analyst' %}
+                            <a href="/delete/{{ item.id }}" class="btn-delete">Delete</a>
                             {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            {% else %}
+            <div class="no-evidence">
+                [NO_RECORDS] Evidence vault is empty.
+            </div>
+            {% endif %}
         </div>
     </div>
 </body>

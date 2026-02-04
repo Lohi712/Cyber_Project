@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Vault Initialization | New Identity</title>
     <style>
         :root {
@@ -143,6 +144,16 @@
             from { transform: translateX(-1px); }
             to { transform: translateX(1px); }
         }
+
+        /* Accessible: visually hide label text without inline styles */
+        .visually-hidden {
+            position: absolute;
+            left: -10000px;
+            top: auto;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
@@ -159,11 +170,14 @@
             <input type="text" name="username" placeholder="ASSIGN_OPERATOR_ID" required autocomplete="off">
             <input type="password" name="password" placeholder="SET_RSA_PASSPHRASE" required>
             
-            <select name="role">
+            <label for="role" class="visually-hidden">Select role</label>
+            <select id="role" name="role" title="Select role">
                 <option value="Investigator">ROLE: FIELD_INVESTIGATOR</option>
                 <option value="Lead Analyst">ROLE: SYSTEM_ANALYST</option>
                 <option value="Legal Auditor">ROLE: LEGAL_VERIFIER</option>
             </select>
+            <input type="text" name="security_question" placeholder="RECOVERY_QUESTION (e.g., First Pet?)" required>
+            <input type="text" name="security_answer" placeholder="RECOVERY_ANSWER" required>
             
             <button type="submit">Establish_Protocol</button>
         </form>

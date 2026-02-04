@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Protocol Sync | Secure MFA</title>
     <style>
         :root {
@@ -106,6 +107,15 @@
             font-weight: bold;
         }
 
+        .muted-label {
+            color: #8b949e;
+        }
+
+        .qr-image {
+            width: 200px;
+            height: 200px;
+        }
+
         .btn { 
             background: var(--hacker-green); 
             color: black; 
@@ -149,12 +159,12 @@
         
         <div class="qr-wrapper">
             <div class="qr-container">
-                <img src="data:image/png;base64,{{ qr_code }}" alt="MFA QR Code" style="width: 200px; height: 200px;">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="MFA QR Code" class="qr-image">
             </div>
         </div>
 
         <div class="secret-display">
-            <span style="color: #8b949e;">MANUAL_OVERRIDE_KEY:</span><br>
+            <span class="muted-label">MANUAL_OVERRIDE_KEY:</span><br>
             <code>{{ secret }}</code>
         </div>
 

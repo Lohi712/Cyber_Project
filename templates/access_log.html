@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Log | Evidence Vault</title>
+    <style>
+        :root {
+            --hacker-green: #00ff41;
+            --hacker-dark: #080b10;
+            --glow: 0 0 15px rgba(0, 255, 65, 0.4);
+        }
+
+        body { 
+            font-family: 'Courier New', Courier, monospace; 
+            background: var(--hacker-dark); 
+            color: var(--hacker-green); 
+            padding: 40px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 1px solid var(--hacker-green);
+            padding: 30px;
+            background: rgba(13, 17, 23, 0.9);
+            box-shadow: var(--glow);
+        }
+
+        h2 {
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.3);
+            padding-bottom: 15px;
+        }
+
+        .file-info {
+            background: rgba(0, 255, 65, 0.05);
+            padding: 15px;
+            margin-bottom: 25px;
+            border-left: 3px solid var(--hacker-green);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #30363d;
+        }
+
+        th {
+            background: rgba(0, 255, 65, 0.1);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 2px;
+        }
+
+        tr:hover {
+            background: rgba(0, 255, 65, 0.05);
+        }
+
+        .no-logs {
+            text-align: center;
+            color: #8b949e;
+            padding: 30px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 25px;
+            color: #58a6ff;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            color: var(--hacker-green);
+        }
+
+        .access-type {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+
+        .access-download {
+            background: rgba(255, 165, 0, 0.2);
+            color: orange;
+        }
+
+        .access-view {
+            background: rgba(0, 255, 65, 0.2);
+            color: var(--hacker-green);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>ACCESS_LOG</h2>
+        
+        <div class="file-info">
+            <strong>FILE:</strong> {{ item.filename }}<br>
+            <strong>UPLOADED_BY:</strong> {{ item.uploader }}
+        </div>
+
+        {% if logs %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Accessed By</th>
+                    <th>Action</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.accessed_by }}</td>
+                    <td>
+                        <span class="access-type access-{{ log.access_type }}">
+                            {{ log.access_type }}
+                        </span>
+                    </td>
+                    <td>{{ log.accessed_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-logs">
+            [NO_ACCESS_RECORDS] This file has not been accessed by anyone yet.
+        </div>
+        {% endif %}
+
+        <a href="/dashboard" class="back-link">← RETURN_TO_DASHBOARD</a>
+    </div>
+</body>
+</html>

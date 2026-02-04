@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vault Access | Secure Terminal</title>
+    <title>Password Recovery | Secure Terminal</title>
     <style>
         :root {
             --hacker-green: #00ff41;
@@ -24,7 +24,6 @@
             overflow: hidden;
         }
 
-        /* CRT Scanline Effect Overlay */
         body::before {
             content: " ";
             display: block;
@@ -37,7 +36,7 @@
             pointer-events: none;
         }
 
-        .login-box { 
+        .reset-box { 
             position: relative;
             padding: 45px; 
             border: 1px solid var(--hacker-green); 
@@ -45,13 +44,12 @@
             box-shadow: var(--glow);
             border-radius: 2px;
             z-index: 5;
-            width: 380px;
+            width: 420px;
             text-align: center;
         }
 
-        /* Top Corner Decorative Elements */
-        .login-box::before {
-            content: "AUTH_REQ_256";
+        .reset-box::before {
+            content: "RECOVERY_PROTOCOL";
             position: absolute;
             top: -10px;
             left: 10px;
@@ -70,9 +68,14 @@
             padding-bottom: 15px;
         }
 
-        .input-group {
-            position: relative;
-            margin-bottom: 20px;
+        .instructions {
+            color: #8b949e;
+            font-size: 11px;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            text-align: left;
+            padding: 10px;
+            border-left: 2px solid var(--hacker-green);
         }
 
         input { 
@@ -94,6 +97,44 @@
             box-shadow: var(--border-glow);
         }
 
+        input:disabled {
+            background: #0d1117;
+            color: #58a6ff;
+            border-color: #58a6ff;
+        }
+
+        .input-label {
+            text-align: left;
+            margin-left: 5%;
+            font-size: 10px;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 15px;
+        }
+
+        .security-question-box {
+            background: rgba(88, 166, 255, 0.1);
+            border: 1px solid #58a6ff;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .security-question-box .label {
+            font-size: 10px;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .security-question-box .question {
+            color: #58a6ff;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
         button { 
             background: var(--hacker-green); 
             border: 1px solid var(--hacker-green); 
@@ -105,7 +146,7 @@
             text-transform: uppercase;
             letter-spacing: 3px;
             transition: 0.4s;
-            margin-top: 10px;
+            margin-top: 20px;
         }
 
         button:hover {
@@ -114,17 +155,10 @@
             box-shadow: var(--glow);
         }
 
-        .register-footer { 
+        .back-footer { 
             margin-top: 30px; 
             border-top: 1px solid rgba(48, 54, 61, 0.5); 
             padding-top: 20px; 
-        }
-
-        .register-hint {
-            color: #8b949e;
-            font-size: 11px;
-            display: block;
-            margin-bottom: 5px;
         }
 
         .nav-link { 
@@ -139,7 +173,7 @@
             text-decoration: underline;
         }
 
-        .login-error {
+        .error-msg {
             background: rgba(248, 81, 73, 0.1);
             border: 1px solid #f85149;
             color: #f85149;
@@ -158,58 +192,62 @@
             80% { transform: translate(5px, -5px); }
             100% { transform: translate(0); }
         }
-        
-        .forgot-password {
-            margin-top: 15px;
-            text-align: right;
-            padding-right: 5%;
-        }
-
-        .forgot-password .nav-link {
-            font-size: 10px;
-            color: #8b949e;
-        }
-
-        .forgot-password .nav-link:hover {
-            color: var(--hacker-green);
-        }
-        .login-success {
-            background: rgba(0, 255, 65, 0.1);
-            border: 1px solid var(--hacker-green);
-            color: var(--hacker-green);
-            padding: 12px;
-            margin-bottom: 25px;
-            font-size: 11px;
-            text-transform: uppercase;
-        }
     </style>
 </head>
 <body>
-    <div class="login-box">
-        <h2>SECURE_GATEWAY</h2>
-        {% if success_msg %}
-        <div class="login-success">
-            [SYSTEM_OK] {{ success_msg }}
-        </div>
-        {% endif %}
+    <div class="reset-box">
+        <h2>CREDENTIAL_RECOVERY</h2>
         
         {% if error_msg %}
-        <div class="login-error">
+        <div class="error-msg">
             [SYSTEM_ERR] {{ error_msg }}
         </div>
         {% endif %}
 
-        <form action="/" method="post">
-            <input type="text" name="username" placeholder="OPERATOR_ID" required autocomplete="off">
-            <input type="password" name="password" placeholder="PASSPHRASE" required>
-            <button type="submit">Decrypt & Initialize</button>
-        </form>
-        <div class="forgot-password">
-            <a href="/reset_password" class="nav-link">FORGOT_PASSPHRASE?</a>
+        {% if not show_question %}
+        <!-- STEP 1: Enter Username to Fetch Security Question -->
+        <div class="instructions">
+            > STEP 1: Enter your OPERATOR_ID to retrieve your security question.
         </div>
-        <div class="register-footer">
-            <span class="register-hint">NEW INSTANCE?</span>
-            <a href="/register" class="nav-link">GENERATE_NEW_OPERATOR</a>
+
+        <form action="/reset_password" method="post">
+            <div class="input-label">OPERATOR_ID</div>
+            <input type="text" name="username" placeholder="Enter your username" required autocomplete="off">
+            
+            <button type="submit">FETCH_SECURITY_QUESTION</button>
+        </form>
+
+        {% else %}
+        <!-- STEP 2: Show Security Question and Reset Form -->
+        <div class="instructions">
+            > STEP 2: Answer your security question and set a new passphrase.
+        </div>
+
+        <form action="/reset_password" method="post">
+            <!-- Hidden username field to pass it along -->
+            <input type="hidden" name="username" value="{{ username }}">
+            
+            <div class="input-label">OPERATOR_ID</div>
+            <input type="text" value="{{ username }}" disabled aria-label="OPERATOR_ID">
+            
+            <!-- Display the Security Question -->
+            <div class="security-question-box">
+                <div class="label">YOUR_SECURITY_QUESTION:</div>
+                <div class="question">{{ security_question }}</div>
+            </div>
+            
+            <div class="input-label">SECURITY_ANSWER</div>
+            <input type="text" name="security_answer" placeholder="Enter your answer" required autocomplete="off">
+            
+            <div class="input-label">NEW_PASSPHRASE</div>
+            <input type="password" name="new_password" placeholder="Enter new password (min 8 chars)" required minlength="8">
+            
+            <button type="submit">RESET_PASSPHRASE</button>
+        </form>
+        {% endif %}
+        
+        <div class="back-footer">
+            <a href="/" class="nav-link">← RETURN_TO_LOGIN</a>
         </div>
     </div>
 </body>

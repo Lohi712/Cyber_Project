@@ -2,169 +2,138 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Integrity Manifest | Digital Evidence Vault</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification Result | Evidence Vault</title>
     <style>
         :root {
-            --hacker-blue: #58a6ff;
             --hacker-green: #00ff41;
             --hacker-dark: #080b10;
-            --glow-blue: 0 0 15px rgba(88, 166, 255, 0.3);
+            --glow: 0 0 15px rgba(0, 255, 65, 0.4);
         }
 
         body { 
             font-family: 'Courier New', Courier, monospace; 
             background: var(--hacker-dark); 
-            color: white; 
+            color: var(--hacker-green); 
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            height: 100vh;
             margin: 0;
-            overflow-x: hidden;
         }
 
-        /* CRT Terminal Scanlines */
-        body::before {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
-                        linear-gradient(90deg, rgba(88, 166, 255, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
-            z-index: 10;
-            background-size: 100% 2px, 3px 100%;
-            pointer-events: none;
+        .result-box {
+            border: 1px solid var(--hacker-green);
+            padding: 45px;
+            background: rgba(13, 17, 23, 0.9);
+            box-shadow: var(--glow);
+            text-align: center;
+            min-width: 400px;
         }
 
-        .report-box { 
-            position: relative;
-            padding: 40px; 
-            border: 1px solid var(--hacker-blue); 
-            background: rgba(13, 17, 23, 0.95);
-            box-shadow: var(--glow-blue);
-            border-radius: 2px;
-            z-index: 5;
-            width: 550px;
-            text-align: left;
-        }
-
-        /* Tactical Header Decoration */
-        .report-box::before {
-            content: "[INTEL_INTEGRITY_MANIFEST_v4.0]";
-            position: absolute;
-            top: -12px;
-            left: 20px;
-            background: var(--hacker-dark);
-            padding: 0 10px;
-            font-size: 10px;
-            letter-spacing: 2px;
-            color: var(--hacker-blue);
-        }
-
-        h2 { 
-            color: var(--hacker-blue); 
+        h2 {
             text-transform: uppercase;
             letter-spacing: 3px;
-            margin-top: 0;
-            font-size: 1.4rem;
-            border-bottom: 1px solid rgba(88, 166, 255, 0.2);
-            padding-bottom: 15px;
+            margin-bottom: 30px;
         }
 
-        .data-point {
-            margin: 15px 0;
-            font-size: 13px;
+        .file-info {
+            background: rgba(0, 255, 65, 0.05);
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: left;
+            border-left: 3px solid var(--hacker-green);
         }
 
-        .label {
-            color: var(--hacker-blue);
-            font-weight: bold;
-            margin-right: 10px;
-        }
-
-        .status-badge { 
-            background: rgba(0, 255, 65, 0.1);
-            color: var(--hacker-green); 
-            font-weight: bold; 
-            border: 1px solid var(--hacker-green); 
-            padding: 12px; 
-            border-radius: 2px; 
-            display: block; 
-            text-align: center; 
-            margin: 25px 0; 
-            letter-spacing: 5px;
-            text-transform: uppercase;
-            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
-        }
-
-        .sig-header {
-            font-size: 11px;
-            color: #8b949e;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
-
-        code { 
-            background: #05070a; 
-            padding: 15px; 
-            display: block; 
-            word-break: break-all; 
-            color: #8b949e; 
-            border: 1px solid #30363d;
-            border-radius: 2px; 
-            font-size: 10px; 
-            line-height: 1.4;
-        }
-
-        .footer-meta {
-            margin-top: 25px;
-            font-size: 10px;
-            color: #5d6771;
-            display: flex;
-            justify-content: space-between;
-            border-top: 1px solid #30363d;
-            padding-top: 15px;
-        }
-
-        .back-btn { 
-            color: var(--hacker-blue); 
-            text-decoration: none; 
-            display: inline-block; 
-            margin-top: 25px;
-            font-size: 12px;
-            transition: 0.3s;
-        }
-
-        .back-btn:hover {
+        .status-pass {
             color: var(--hacker-green);
-            text-decoration: underline;
+            font-size: 1.4rem;
+            padding: 20px;
+            border: 2px solid var(--hacker-green);
+            background: rgba(0, 255, 65, 0.1);
+            margin-bottom: 25px;
+        }
+
+        .status-fail {
+            color: #f85149;
+            font-size: 1.4rem;
+            padding: 20px;
+            border: 2px solid #f85149;
+            background: rgba(248, 81, 73, 0.1);
+            margin-bottom: 25px;
+        }
+
+        .confirm-btn {
+            background: var(--hacker-green);
+            border: none;
+            padding: 15px 30px;
+            color: black;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 15px;
+        }
+
+        .confirm-btn:hover {
+            background: transparent;
+            color: var(--hacker-green);
+            border: 1px solid var(--hacker-green);
+            box-shadow: var(--glow);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 25px;
+            color: #58a6ff;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            color: var(--hacker-green);
+        }
+
+        .warning-text {
+            color: #8b949e;
+            font-size: 11px;
+            margin-top: 15px;
         }
     </style>
 </head>
 <body>
-    <div class="report-box">
-        <h2>_VERIFICATION_MANIFEST</h2>
+    <div class="result-box">
+        <h2>INTEGRITY_CHECK</h2>
         
-        <div class="data-point">
-            <span class="label">CASE_IDENT:</span> {{ item.filename }}
+        <div class="file-info">
+            <strong>FILE:</strong> {{ item.filename }}<br>
+            <strong>UPLOADER:</strong> {{ item.uploader }}
         </div>
-        <div class="data-point">
-            <span class="label">ORIGIN_NODE:</span> {{ item.uploader }}
-        </div>
-        
-        <div class="status-badge">
-            VERIFICATION_{{ status }}
-        </div>
-        
-        <div class="sig-header">RSA-2048_DIGITAL_SIGNATURE_BLOCK:</div>
-        <code>{{ item.signature }}</code>
-        
-        <div class="footer-meta">
-            <span>AUDIT_TIMESTAMP: 2026-01-28 17:30:14</span>
-            <span>STATUS: [SECURE]</span>
+
+        {% if status == "PASS" %}
+        <div class="status-pass">
+            ✓ INTEGRITY_VERIFIED<br>
+            <small>No tampering detected</small>
         </div>
         
-        <a href="/dashboard" class="back-btn">← RETURN_TO_COMMAND_CENTER</a>
+        {% if can_confirm and not item.is_verified %}
+        <form action="/confirm_verification/{{ item.id }}" method="post">
+            <button type="submit" class="confirm-btn">MARK_AS_VERIFIED</button>
+        </form>
+        <p class="warning-text">Click above to officially certify this evidence.</p>
+        {% elif item.is_verified %}
+        <p class="warning-text">✓ Already verified by {{ item.verified_by }} on {{ item.verified_at.strftime('%Y-%m-%d %H:%M') }}</p>
+        {% endif %}
+
+        {% else %}
+        <div class="status-fail">
+            ✗ TAMPERING_DETECTED<br>
+            <small>File integrity compromised</small>
+        </div>
+        <p class="warning-text">⚠ This evidence cannot be verified. Contact Lead Analyst.</p>
+        {% endif %}
+
+        <a href="/dashboard" class="back-link">← RETURN_TO_DASHBOARD</a>
     </div>
 </body>
 </html>
