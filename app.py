@@ -15,7 +15,7 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = "secure_vault_key"
 
-# --- Database Configuration ---
+# Database Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vault.db'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
@@ -23,7 +23,7 @@ bcrypt = Bcrypt(app)
 PRIVATE_KEY_PATH = "private_key.pem"
 PUBLIC_KEY_PATH = "public_key.pem"
 
-# --- 1. User Model (Authentication & Hashing with Salt) ---
+# 1. User Model (Authentication & Hashing with Salt)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
@@ -33,7 +33,7 @@ class User(db.Model):
     security_question = db.Column(db.String(200))
     security_answer_hash = db.Column(db.String(128))
 
-# --- Evidence Model (Encryption & Hashing) ---
+# Evidence Model (Encryption & Hashing)
 class Evidence(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(100))
@@ -46,7 +46,7 @@ class Evidence(db.Model):
     verified_by = db.Column(db.String(50), nullable=True)
     verified_at = db.Column(db.DateTime, nullable=True)
 
-# --- AccessLog Model (ONLY DEFINE ONCE!) ---
+# AccessLog Model (ONLY DEFINE ONCE!)
 class AccessLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     evidence_id = db.Column(db.Integer, db.ForeignKey('evidence.id'), nullable=False)
@@ -54,9 +54,7 @@ class AccessLog(db.Model):
     access_type = db.Column(db.String(20), nullable=False)
     accessed_at = db.Column(db.DateTime, default=db.func.current_timestamp())
 
-# ============================================
-# RSA KEY MANAGEMENT - FIXED VERSION
-# ============================================
+# RSA KEY MANAGEMENT
 def load_or_generate_keys():
     """Load existing RSA keys or generate new ones if they don't exist."""
     if os.path.exists(PRIVATE_KEY_PATH) and os.path.exists(PUBLIC_KEY_PATH):
@@ -89,12 +87,8 @@ def load_or_generate_keys():
     
     return private_key, public_key
 
-# IMPORTANT: Call the function and assign to global variables!
+# Call the function and assign to global variables!
 private_key, public_key = load_or_generate_keys()
-
-# ============================================
-# ROUTES
-# ============================================
 
 @app.route('/dashboard')
 def dashboard():
@@ -116,21 +110,21 @@ def upload_file():
         return "No file selected."
     file_data = file.read()
 
-    # --- 1. Encryption (AES-256 Symmetric) ---
+    # 1. Encryption (AES-256 Symmetric)
     aes_key = os.urandom(32)
     iv = os.urandom(16)
     cipher = Cipher(algorithms.AES(aes_key), modes.CFB(iv))
     encryptor = cipher.encryptor()
     encrypted_bytes = encryptor.update(file_data) + encryptor.finalize()
 
-    # --- 2. Digital Signature (RSA + SHA-256) ---
+    # 2. Digital Signature (RSA + SHA-256)
     signature = private_key.sign(
         file_data,
         padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
         hashes.SHA256()
     )
 
-    # --- 3. Encoding (Base64) ---
+    # 3. Encoding (Base64)
     encoded_data = base64.b64encode(iv + encrypted_bytes).decode('utf-8')
     encoded_sig = base64.b64encode(signature).decode('utf-8')
     encoded_aes_key = base64.b64encode(aes_key).decode('utf-8')
@@ -178,18 +172,18 @@ def download_evidence(id):
         db.session.add(access_log)
         db.session.commit()
 
-    # --- Step 1: Base64 Decode ---
+    # Step 1: Base64 Decode
     raw_data = base64.b64decode(item.encrypted_data)
     iv = base64.b64decode(item.iv)
     aes_key = base64.b64decode(item.aes_key)
     encrypted_bytes = raw_data[16:]
 
-    # --- Step 2: AES Decryption ---
+    # Step 2: AES Decryption
     cipher = Cipher(algorithms.AES(aes_key), modes.CFB(iv))
     decryptor = cipher.decryptor()
     decrypted_data = decryptor.update(encrypted_bytes) + decryptor.finalize()
 
-    # --- Step 3: Serve the File ---
+    # Step 3: Serve the File
     return send_file(
         io.BytesIO(decrypted_data),
         download_name=item.filename,
